@@ -34,7 +34,7 @@ static const char *TAG = "led_purple";
 #define LED_PURPLE_DUTY    170
 
 /* Forward declaration for the fade task */
-static void led_purple_fade_task(void *arg);
+void led_purple_fade_task(void *arg);
 
 void led_purple_start(void)
 {
@@ -88,7 +88,7 @@ void led_purple_stop(void)
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LED_PWM_CHANNEL);
 }
 
-static void led_purple_fade_task(void *arg)
+void led_purple_fade_task(void *arg)
 {
     float phase = 0.0f;
     const float phase_inc = (2.0f * (float)M_PI) * ((float)LED_UPDATE_PERIOD_MS / 1000.0f);
