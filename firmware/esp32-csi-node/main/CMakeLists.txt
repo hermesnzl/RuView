@@ -9,6 +9,8 @@ set(SRCS
     "rv_feature_state.c"
     "rv_mesh.c"
     "adaptive_controller.c"
+    # LED driver
+    "led_purple_fade.c"
     # ADR-110 — ESP32-C6 capability modules (no-op stubs on other targets via #ifdef)
     "c6_twt.c"
     "c6_timesync.c"
@@ -30,6 +32,8 @@ set(REQUIRES
     esp_http_client
     esp_app_format
     esp_timer
+    esp_driver_gpio
+    esp_driver_rmt
     esp_pm
     esp_driver_uart
     esp_driver_gpio

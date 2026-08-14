@@ -44,6 +44,8 @@
 
 #include "esp_timer.h"
 
+#include "led_purple.h"
+
 static const char *TAG = "main";
 
 /* ADR-040: WASM timer handle (calls on_timer at configurable interval). */
@@ -231,44 +233,17 @@ void app_main(void)
     /* Onboard WS2812. C6 wires the LED to GPIO 8; S3 to GPIO 38 (DevKitC-1 v1.0)
      * or GPIO 48 (DevKitC-1 v1.1 / N16R8 — see #962). On S3 we drive 48 (the
      * common module). On C6, GPIO 38/48 don't exist (only 0-30) — gate by target.
-     * Behaviour is set by CONFIG_LED_GAMMA_VIZ (ADR-183): on = 40 Hz gamma flicker
-     * coloured by CSI motion; off = clear the LED at boot. */
+     * New behaviour (ADR-XXX): always run a smooth light-purple fade on the
+     * onboard LED after WiFi connects. The old 40 Hz gamma flicker
+     * (CONFIG_LED_GAMMA_VIZ) is replaced by this. */
 #if defined(CONFIG_IDF_TARGET_ESP32C6)
     const int led_gpio = 8;
 #else
     const int led_gpio = 48;
 #endif
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = led_gpio,
-        .max_leds = 1,
-        .led_model = LED_MODEL_WS2812,
-        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
-        .flags.invert_out = false,
-    };
-    led_strip_rmt_config_t rmt_config = {
-        .resolution_hz = 10 * 1000 * 1000, // 10MHz
-        .flags.with_dma = false,
-    };
-#if CONFIG_LED_GAMMA_VIZ
-    if (led_strip_new_rmt_device(&strip_config, &rmt_config, &s_viz_led) == ESP_OK) {
-        const esp_timer_create_args_t viz_args = {
-            .callback = &led_gamma_40hz_cb,
-            .name = "led_gamma_40hz",
-        };
-        esp_timer_handle_t viz_timer;
-        if (esp_timer_create(&viz_args, &viz_timer) == ESP_OK) {
-            esp_timer_start_periodic(viz_timer, 12500); // 12.5 ms toggle → 40 Hz square wave
-            ESP_LOGI(TAG, "Onboard WS2812: 40 Hz gamma flicker (GENUS), colour=CSI motion via ruv-neural-viz, GPIO %d", led_gpio);
-        }
-    }
-#else
-    /* Viz disabled — clear the onboard LED at boot and release the RMT channel. */
-    led_strip_handle_t led_strip;
-    if (led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip) == ESP_OK) {
-        led_strip_clear(led_strip);
-        led_strip_del(led_strip);
-    }
-#endif /* CONFIG_LED_GAMMA_VIZ */
+    /* Purple fade - LEDC PWM directly (no led_strip dependency). */
+    led_purple_start();
+    ESP_LOGI(TAG, "Onboard LED purple fade started, GPIO %d", led_gpio);
 
     /* ADR-110 P4: 802.15.4 mesh time-sync (C6 only).
      * Initialized BEFORE WiFi so it's available even when WiFi STA can't
